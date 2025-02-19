@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Food</title>
+</head>
+<body>
+    <h1>Add Food</h1>
+    <form id="addFoodForm">
+        <label for="foodName">Food Name:</label>
+        <input type="text" id="foodName" name="foodName" required>
+        <br>
+        <label for="quantity">Quantity:</label>
+        <input type="number" id="quantity" name="quantity" required>
+        <br>
+        <label for="perishable">Perishable:</label>
+        <input type="checkbox" id="perishable" name="perishable">
+        <br>
+        <button type="submit">Add Food</button>
+    </form>
+    <script>
+        document.getElementById('addFoodForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const data = {
+                foodName: event.target.foodName.value,
+                quantity: event.target.quantity.value,
+                perishable: event.target.perishable.checked
+            };
+            fetch('/add_food', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => alert(data.message));
+        });
+    </script>
+</body>
+</html>

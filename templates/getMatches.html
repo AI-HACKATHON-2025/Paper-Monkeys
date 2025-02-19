@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Matches</title>
+</head>
+<body>
+    <h1>Get Matches</h1>
+    <button id="getMatchesButton">Get Matches</button>
+    <ul id="matchesList"></ul>
+    <script>
+        document.getElementById('getMatchesButton').addEventListener('click', function() {
+            fetch('/get_matches')
+            .then(response => response.json())
+            .then(data => {
+                const matchesList = document.getElementById('matchesList');
+                matchesList.innerHTML = '';
+                data.matches.forEach(match => {
+                    const li = document.createElement('li');
+                    li.textContent = `Food: ${match.foodName}, Quantity: ${match.quantity}, Perishable: ${match.perishable ? 'Yes' : 'No'}`;
+                    matchesList.appendChild(li);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
