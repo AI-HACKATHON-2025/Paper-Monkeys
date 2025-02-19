@@ -1,42 +1,148 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Food</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Add Food</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <style>
+    #map {
+      height: 400px;
+      width: 100%;
+      margin-top: 10px;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    form {
+      max-width: 600px;
+    }
+    label {
+      display: block;
+      margin: 10px 0 5px;
+    }
+    input, select, button {
+      padding: 8px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+  </style>
 </head>
 <body>
-    <h1>Add Food</h1>
-    <form id="addFoodForm">
-        <label for="foodName">Food Name:</label>
-        <input type="text" id="foodName" name="foodName" required>
-        <br>
-        <label for="quantity">Quantity:</label>
-        <input type="number" id="quantity" name="quantity" required>
-        <br>
-        <label for="perishable">Perishable:</label>
-        <input type="checkbox" id="perishable" name="perishable">
-        <br>
-        <button type="submit">Add Food</button>
-    </form>
-    <script>
-        document.getElementById('addFoodForm').addEventListener('submit', function(event) {
-            event.preventDefault();
-            const data = {
-                foodName: event.target.foodName.value,
-                quantity: event.target.quantity.value,
-                perishable: event.target.perishable.checked
-            };
-            fetch('/add_food', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(data => alert(data.message));
+  <h1>Add Food</h1>
+  <form id="addFoodForm">
+    <!-- Ensure the name attribute matches backend keys -->
+    <label for="foodName">Food Name:</label>
+    <input type="text" id="foodName" name="food_name" required />
+
+    <label for="quantity">Quantity:</label>
+    <input type="number" id="quantity" name="quantity" required />
+
+    <label for="condition">Condition:</label>
+    <select id="condition" name="condition" required>
+      <option value="good">Good</option>
+      <option value="bad">Bad</option>
+    </select>
+
+    <label for="location">Location (Name):</label>
+    <input type="text" id="location" name="location" placeholder="Enter a location name" required />
+
+    <!-- Map for geocoding -->
+    <div id="map"></div>
+
+    <br />
+    <button type="submit">Add Food</button>
+  </form>
+
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script>
+    // Initialize the map with a default view
+    const map = L.map('map').setView([51.505, -0.09], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    let marker;
+
+    // Function to update or create the marker on the map
+    function updateMarker(lat, lng) {
+      const latlng = L.latLng(lat, lng);
+      map.setView(latlng, 13);
+      if (marker) {
+        marker.setLatLng(latlng);
+      } else {
+        marker = L.marker(latlng).addTo(map);
+      }
+    }
+
+    // Reverse geocoding: When clicking on the map, update marker and location input
+    map.on('click', function(e) {
+      const lat = e.latlng.lat;
+      const lng = e.latlng.lng;
+      updateMarker(lat, lng);
+      // Call Nominatim reverse geocoding API to get a human-readable address
+      fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data && data.display_name) {
+            document.getElementById('location').value = data.display_name;
+          } else {
+            document.getElementById('location').value = lat.toFixed(5) + ', ' + lng.toFixed(5);
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          document.getElementById('location').value = lat.toFixed(5) + ', ' + lng.toFixed(5);
         });
-    </script>
+    });
+
+    // Forward geocoding: When a location name is entered, convert it to coordinates and update the marker
+    document.getElementById('location').addEventListener('change', function() {
+      const locationName = this.value.trim();
+      if (!locationName) return;
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data && data.length > 0) {
+            const lat = parseFloat(data[0].lat);
+            const lng = parseFloat(data[0].lon);
+            updateMarker(lat, lng);
+          } else {
+            alert("Location not found. Please try a different name.");
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          alert("Error fetching location. Please try again later.");
+        });
+    });
+
+    // Submit the Add Food form
+    document.getElementById('addFoodForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+      const data = {
+        food_name: event.target.food_name.value,
+        quantity: event.target.quantity.value,
+        condition: event.target.condition.value,
+        location: event.target.location.value
+      };
+      fetch('/add_food', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      .then(response => response.json())
+      .then(result => {
+        alert(result.message);
+        // Optionally, clear the form after submission
+        event.target.reset();
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Error submitting the form.");
+      });
+    });
+  </script>
 </body>
 </html>
